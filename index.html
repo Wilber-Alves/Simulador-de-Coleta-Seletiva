@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Simulação: Coleta Seletiva (texto)</title>
+<style>
+  :root{
+    --bg:#f5f7fa; --card:#fff; --muted:#586069;
+  }
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto; background:var(--bg); margin:0; padding:20px; color:#111;}
+  header{display:flex;gap:16px;align-items:center;margin-bottom:14px;}
+  h1{font-size:1.25rem;margin:0}
+  .container{display:flex;gap:20px;flex-wrap:wrap;}
+  .panel{background:var(--card);border-radius:8px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,0.06);flex:1;min-width:280px}
+  .bins{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap}
+  .bin{flex:1;min-width:100px;border-radius:8px;padding:10px;color:#fff;cursor:pointer;display:flex;flex-direction:column;align-items:center}
+  .bin .label{font-weight:700;margin-top:8px}
+  .items{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+  .item{background:#fff;border-radius:6px;padding:8px 10px;min-width:160px;cursor:grab;display:flex;align-items:center;gap:8px;border:1px solid #e6e9ee}
+  footer{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .btn{background:#0366d6;color:#fff;padding:8px 12px;border-radius:6px;border:0;cursor:pointer}
+  .small{font-size:0.9rem;color:var(--muted)}
+  .score{font-size:1.1rem;font-weight:700}
+  .results{margin-top:10px}
+  .c-azul{background:#0b63b8} /* papel */
+  .c-vermelho{background:#d93025} /* plástico */
+  .c-verde{background:#2e7d32} /* vidro */
+  .c-amarelo{background:#f4c542;color:#111} /* metal */
+  .c-marrom{background:#6b3b10} /* orgânico */
+  .c-cinza{background:#6c757d} /* rejeito */
+  .feedback{margin-top:8px;padding:8px;border-radius:6px}
+  .ok{background:#e6f4ea;color:#1b5e20}
+  .bad{background:#fdecea;color:#7a1b1b}
+  .report{background:#fff3cd;color:#856404;padding:10px;border-radius:6px}
+  .legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .legend span{display:flex;gap:6px;align-items:center;padding:6px;border-radius:6px;background:#fff;border:1px solid #e6e9ee}
+  .dot{width:14px;height:14px;border-radius:3px;display:inline-block}
+  @media (max-width:720px){.container{flex-direction:column}}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Simulação: Identificar resíduos e destinar corretamente</h1>
+    <div class="small">Arraste os cartões de texto para a lixeira correta.</div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="panel" style="flex:1.5">
+    <strong>Instruções</strong>
+    <p class="small">Arraste cada cartão até a lixeira que corresponde ao destino correto. Clique em "Verificar" para feedback. Use "Reiniciar" para começar de novo.</p>
+
+    <div class="legend">
+      <span><span class="dot" style="background:#0b63b8"></span> Azul — Papel</span>
+      <span><span class="dot" style="background:#d93025"></span> Vermelho — Plástico</span>
+      <span><span class="dot" style="background:#2e7d32"></span> Verde — Vidro</span>
+      <span><span class="dot" style="background:#f4c542"></span> Amarelo — Metal</span>
+      <span><span class="dot" style="background:#6b3b10"></span> Marrom — Orgânico</span>
+      <span><span class="dot" style="background:#6c757d"></span> Cinza — Rejeito</span>
+    </div>
+
+    <div style="margin-top:12px">
+      <strong>Contêineres (alvos)</strong>
+      <div class="bins" id="bins">
+        <div class="bin c-azul" data-type="papel" tabindex="0">
+          <div style="font-size:0.95rem">AZUL</div>
+          <div class="label">PAPEL</div>
+        </div>
+        <div class="bin c-vermelho" data-type="plastico" tabindex="0">
+          <div>VERMELHO</div>
+          <div class="label">PLÁSTICO</div>
+        </div>
+        <div class="bin c-verde" data-type="vidro" tabindex="0">
+          <div>VERDE</div>
+          <div class="label">VIDRO</div>
+        </div>
+        <div class="bin c-amarelo" data-type="metal" tabindex="0">
+          <div>AMARELO</div>
+          <div class="label">METAL</div>
+        </div>
+        <div class="bin c-marrom" data-type="organico" tabindex="0">
+          <div>MARROM</div>
+          <div class="label">ORGÂNICO</div>
+        </div>
+        <div class="bin c-cinza" data-type="rejeito" tabindex="0">
+          <div>CINZA</div>
+          <div class="label">REJEITO</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:12px">
+      <strong>Resíduos (cartões de texto)</strong>
+      <div class="items" id="items" aria-label="Lista de resíduos — arraste para as lixeiras">
+        <!-- injetado por JS -->
+      </div>
+    </div>
+
+    <footer>
+      <button class="btn" id="checkBtn">Verificar</button>
+      <button class="btn" id="resetBtn" style="background:#6c757d">Reiniciar</button>
+      <div class="score" id="score">Acertos: 0 / 0</div>
+    </footer>
+
+    <div class="results" id="results" aria-live="polite"></div>
+  </div>
+
+  <div class="panel" style="max-width:420px">
+    <strong>Relatório final e BNCC / ODS</strong>
+    <div id="finalReport" class="small" style="margin-top:8px">
+      Use "Verificar" e depois "Gerar Relatório" para ver comparação didática de impactos.
+    </div>
+
+    <div style="margin-top:12px">
+      <button class="btn" id="reportBtn" style="background:#0b63b8">Gerar Relatório</button>
+    </div>
+
+    <div style="margin-top:12px" class="small" id="references"></div>
+  </div>
+</div>
+
+<script>
+const ITEMS = [
+  {id:'i1',label:'Garrafa PET (lavada)',type:'plastico'},
+  {id:'i2',label:'Jornal e revista (seco)',type:'papel'},
+  {id:'i3',label:'Lata de alumínio (limpa)',type:'metal'},
+  {id:'i4',label:'Pote de vidro (frascos limpos)',type:'vidro'},
+  {id:'i5',label:'Restos de comida (casca de banana)',type:'organico'},
+  {id:'i6',label:'Saco plástico sujo com óleo',type:'rejeito'},
+  {id:'i7',label:'Embalagem longa vida (cartão + plástico)',type:'rejeito'},
+  {id:'i8',label:'Papel toalha sujo',type:'rejeito'},
+  {id:'i9',label:'Caixa de papelão (achatada, seca)',type:'papel'},
+  {id:'i10',label:'Tampinha metálica (limpa)',type:'metal'}
+];
+
+const itemsContainer = document.getElementById('items');
+const bins = document.querySelectorAll('.bin');
+let total = ITEMS.length;
+let placed = {};
+let correctCount = 0;
+
+function renderItems(){
+  itemsContainer.innerHTML='';
+  const shuffle = ITEMS.slice().sort(()=>Math.random()-0.5);
+  shuffle.forEach(it=>{
+    const el = document.createElement('div');
+    el.className='item';
+    el.id=it.id;
+    el.draggable=true;
+    el.dataset.type=it.type;
+    el.setAttribute('role','button');
+    el.setAttribute('aria-grabbed','false');
+    el.innerHTML = `<div style="flex:1"><strong>${it.label}</strong></div>`;
+    el.addEventListener('dragstart', e=>{
+      e.dataTransfer.setData('text/plain', it.id);
+      el.setAttribute('aria-grabbed','true');
+    });
+    el.addEventListener('dragend', e=>{ el.setAttribute('aria-grabbed','false'); });
+    itemsContainer.appendChild(el);
+  });
+  document.getElementById('score').textContent = 'Acertos: 0 / ' + total;
+}
+renderItems();
+
+bins.forEach(bin=>{
+  bin.addEventListener('dragover', e=>{ e.preventDefault(); bin.style.opacity=0.9; });
+  bin.addEventListener('dragleave', e=>{ bin.style.opacity=1; });
+  bin.addEventListener('drop', e=>{
+    e.preventDefault();
+    bin.style.opacity=1;
+    const id = e.dataTransfer.getData('text/plain');
+    if(!id) return;
+    const item = document.getElementById(id);
+    if(!item) return;
+    // mark as placed
+    item.style.opacity=0.35;
+    item.draggable=false;
+    placed[id] = bin.dataset.type;
+    const mini = document.createElement('div');
+    mini.className='item mini-'+id;
+    mini.style.marginTop='6px';
+    mini.style.cursor='default';
+    mini.textContent = item.textContent;
+    bin.appendChild(mini);
+    updateScoreDisplay();
+  });
+});
+
+function checkAll(){
+  correctCount = 0;
+  const feedback = document.getElementById('results');
+  feedback.innerHTML = '';
+  ITEMS.forEach(it=>{
+    const placedType = placed[it.id];
+    const ok = placedType === it.type;
+    const p = document.createElement('div');
+    p.className = 'feedback ' + (ok ? 'ok' : 'bad');
+    p.textContent = `${it.label} → ${placedType ? placedType.toUpperCase() : 'não colocado'} — ${ok ? 'CORRETO' : 'INCORRETO (correta: '+it.type.toUpperCase()+')'}`;
+    feedback.appendChild(p);
+    if(ok) correctCount++;
+  });
+  document.getElementById('score').textContent = 'Acertos: ' + correctCount + ' / ' + total;
+}
+
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  placed = {}; correctCount = 0;
+  ITEMS.forEach(it=>{
+    const el = document.getElementById(it.id);
+    if(el){ el.style.opacity=1; el.draggable=true; el.style.outline=''; }
+  });
+  bins.forEach(bin=>{
+    Array.from(bin.querySelectorAll('.mini-'+ITEMS.map(x=>x.id).join(',.mini-'))).forEach(n=>n.remove());
+    // remove any elements with class starting mini-
+    Array.from(bin.children).forEach(child=>{
+      if(child.className && child.className.indexOf('mini-')===0) child.remove();
+    });
+  });
+  document.getElementById('results').innerHTML='';
+  renderItems();
+});
+
+document.getElementById('reportBtn').addEventListener('click', generateReport);
+document.getElementById('checkBtn').addEventListener('click', checkAll);
+
+function updateScoreDisplay(){
+  const placedCount = Object.keys(placed).length;
+  document.getElementById('score').textContent = 'Acertos: ' + correctCount + ' / ' + total + ' — Colocados: ' + placedCount;
+}
+
+function generateReport(){
+  checkAll();
+  const rep = document.getElementById('finalReport');
+  const before = {landfillPct:100, methane:100, recovery:5};
+  const benefitPerCorrect = 6;
+  let reduction = Math.min(60, correctCount * benefitPerCorrect);
+  const after = {
+    landfillPct: Math.max(40, before.landfillPct - reduction),
+    methane: Math.max(40, before.methane - reduction*0.8),
+    recovery: Math.min(80, before.recovery + correctCount*5)
+  };
+  rep.innerHTML = `
+    <div class="report">
+      <strong>Relatório resumido</strong>
+
+      Antes (sem coleta seletiva efetiva): Aterro: ${before.landfillPct}% | Emissões (CH4): ${before.methane}% | Recuperação: ${before.recovery}%
+
+      Depois (após separação correta observada): Aterro: ${after.landfillPct}% | Emissões (CH4): ${Math.round(after.methane)}% | Recuperação: ${Math.round(after.recovery)}%
+
+      Observação: valores estimativos para fins didáticos.
+    </div>
+  `;
+  const refs = document.getElementById('references');
+  refs.innerHTML = `
+    BNCC — Habilidades: identificação de resíduos, análise de impactos, tomada de decisões socioambientais; Complemento Computação para modelagem e interpretação de indicadores.
+
+
+    ODS: <strong>ODS 12</strong> (Consumo e produção responsáveis) e <strong>ODS 11</strong> (Cidades sustentáveis).
+
+
+    Padrão de cores (Brasil): Azul=papel, Vermelho=plástico, Verde=vidro, Amarelo=metal, Marrom=orgânico, Cinza/Preto=rejeito.
+  `;
+}
+
+/* Acessibilidade: seleção por clique e envio por click em lixeira */
+let selectedItemId = null;
+itemsContainer.addEventListener('click', e=>{
+  const it = e.target.closest('.item');
+  if(!it) return;
+  if(selectedItemId === it.id){ it.style.outline=''; selectedItemId=null; }
+  else{ Array.from(itemsContainer.querySelectorAll('.item')).forEach(el=>el.style.outline=''); it.style.outline='3px solid #0366d6'; selectedItemId = it.id; }
+});
+bins.forEach(bin=>{
+  bin.addEventListener('click', ()=>{
+    if(!selectedItemId) return;
+    const item = document.getElementById(selectedItemId);
+    item.style.opacity=0.35; item.draggable=false;
+    placed[selectedItemId] = bin.dataset.type;
+    const mini = document.createElement('div');
+    mini.className='item mini-'+selectedItemId;
+    mini.style.cursor='default';
+    mini.style.marginTop='6px';
+    mini.textContent = item.textContent;
+    bin.appendChild(mini);
+    item.style.outline=''; selectedItemId=null; updateScoreDisplay();
+  });
+});
+
+document.getElementById('results').innerHTML = '<div class="small">Dica: embalagens limpas e secas facilitam a reciclagem; papel sujo deve ir para rejeito (cinza).</div>';
+</script>
+
+</body>
+</html>
